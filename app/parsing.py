@@ -3,23 +3,45 @@ import requests
 import time 
 from pydantic import BaseModel,TypeAdapter 
 from bs4 import BeautifulSoup
+import os 
+
+
+base_url = "https://quotes.toscrape.com"
+url = base_url + "/"
 
 session = requests.Session()
-base_url = "https://quotes.toscrape.com"
-url = "https://quotes.toscrape.com/"
-file = "robots.json"
+all_quotes = []
+
 while True:
-    
-    response = requests.get(url)
-    html = response.text
+    response = session.get(base_url)
+    soupe = BeautifulSoup(response.text,"html.parser")
 
-    soup = BeautifulSoup(html, "html.parser")
-    with open(file,"w",encoding="utf-8") as f:
-        json.dump(soup.get_text(), f, indent=4, ensure_ascii=False)
+    quote_blocks  = soupe.find_all("div",class_ = "quote")
+    for block in quote_blocks :
+        text = block.find("span", class_="text").get_text()
+        author = block.find("small", class_="author").get_text()
+        tags = [tag.get_text() for tag in block.find_all("a", class_="tag")]:
+            
+        all_quotes.append(
+            {
+                "text":text,
+                "author":author,
+                "tags":tags
+            }
+        )
+    print(f"Собрано цитат: {len(all_quotes)} (страница: {url})")
 
-    next_button = soup.find("li",class_="next")
-    if next_button == None:
-        print("Процесс окончен!")
+    next_button = soupe.find("li", class_="next")
+    if next_button is None:
+        print("Страницы кончились — завершаем")
         break
     next_url = next_button.find("a")["href"]
     url = base_url + next_url
+    time.slepp(1)
+
+
+
+
+
+    
+    
